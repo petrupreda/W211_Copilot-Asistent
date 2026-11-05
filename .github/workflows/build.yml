@@ -5,11 +5,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Creeaza folderul si APK-ul
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Creeaza structura de proiect Android
         run: |
-          mkdir -p app/build/outputs/apk/debug
-          echo "Placeholder APK" > app/build/outputs/apk/debug/app-debug.apk
-      - uses: actions/upload-artifact@v4
+          mkdir -p app/src/main/java/com/example/app
+          mkdir -p app/src/main/res/layout
+          mkdir -p app/src/main/res/values
+
+          # AndroidManifest.xml
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.app"> <application android:label="Asistent W211"> <activity android:name=".MainActivity" android:exported="true"> <intent-filter> <action android:name="android.intent.action.MAIN" /> <category android:name="android.intent.category.LAUNCHER" /> </intent-filter> </activity> </application> </manifest>' > app/src/main/AndroidManifest.xml
+
+          # MainActivity.java minimal
+          echo 'package com.example.app; import android.app.Activity; import android.os.Bundle; import android.widget.TextView; public class MainActivity extends Activity { @Override protected void onCreate(Bundle savedInstanceState) { super.onCreate(savedInstanceState); TextView tv = new TextView(this); tv.setText("W211 Copilot Asistent Functional!"); setContentView(tv); } }' > app/src/main/java/com/example/app/MainActivity.java
+
+          # build.gradle pentru app
+          echo 'plugins { id "com.android.application" } android { namespace "com.example.app" compileSdk 34 defaultConfig { applicationId "com.example.app" minSdk 24 targetSdk 34 versionCode 1 versionName "1.0" } }' > app/build.gradle
+
+          # settings.gradle
+          echo 'pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } } dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS) repositories { google(); mavenCentral() } } rootProject.name = "W211 App" include ":app"' > settings.gradle
+
+          # gradle.properties
+          echo 'android.useAndroidX=true' > gradle.properties
+
+      - name: Build cu Gradle (Debug APK)
+        run: ./gradlew assembleDebug
+
+      - name: Seteaza calea si incarca APK-ul
+        uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
